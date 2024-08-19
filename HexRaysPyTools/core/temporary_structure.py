@@ -264,16 +264,16 @@ class VirtualTable(AbstractMember):
             cdecl_typedef = idaapi.ask_text(0x10000, cdecl_typedef, "The following new type will be created")
             if not cdecl_typedef:
                 return
-        previous_ordinal = idaapi.get_type_ordinal(idaapi.cvar.idati, self.vtable_name)
+        previous_ordinal = idaapi.get_type_ordinal(None, self.vtable_name)
         if previous_ordinal:
-            idaapi.del_numbered_type(idaapi.cvar.idati, previous_ordinal)
+            idaapi.del_numbered_type(None, previous_ordinal)
             ordinal = idaapi.idc_set_local_type(previous_ordinal, cdecl_typedef, idaapi.PT_TYP)
         else:
             ordinal = idaapi.idc_set_local_type(-1, cdecl_typedef, idaapi.PT_TYP)
 
         if ordinal:
             print("[Info] Virtual table " + self.vtable_name + " added to Local Types")
-            return idaapi.import_type(idaapi.cvar.idati, -1, self.vtable_name)
+            return idc.import_type(-1, self.vtable_name)
         else:
             print("[Error] Failed to create virtual table " + self.vtable_name)
             print("*" * 100)
@@ -413,7 +413,7 @@ class Member(AbstractMember):
             return
         _, tp, fld = result
         tinfo = idaapi.tinfo_t()
-        tinfo.deserialize(idaapi.cvar.idati, tp, fld, None)
+        tinfo.deserialize(None, tp, fld, None)
         self.tinfo = tinfo
         self.is_array = False
 
@@ -557,8 +557,12 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
         cdecl = idaapi.ask_text(0x10000, '#pragma pack(push, 1)\n' + cdecl, "The following new type will be created")
 
         if cdecl:
-            structure_name = idaapi.idc_parse_decl(idaapi.cvar.idati, cdecl, idaapi.PT_TYP)[0]
-            previous_ordinal = idaapi.get_type_ordinal(idaapi.cvar.idati, structure_name)
+            decl = idaapi.idc_parse_decl(None, cdecl, idaapi.PT_TYP)
+            if not decl:
+                return
+
+            structure_name = decl[0]
+            previous_ordinal = idaapi.get_type_ordinal(None, structure_name)
 
             if previous_ordinal:
                 reply = QtWidgets.QMessageBox.question(
@@ -568,7 +572,7 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
                     QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
                 )
                 if reply == QtWidgets.QMessageBox.Yes:
-                    idaapi.del_numbered_type(idaapi.cvar.idati, previous_ordinal)
+                    idaapi.del_numbered_type(None, previous_ordinal)
                     ordinal = idaapi.idc_set_local_type(previous_ordinal, cdecl, idaapi.PT_TYP)
                 else:
                     return
@@ -576,7 +580,7 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
                 ordinal = idaapi.idc_set_local_type(-1, cdecl, idaapi.PT_TYP)
             if ordinal:
                 print("[Info] New type {0} was added to Local Types".format(structure_name))
-                tid = idaapi.import_type(idaapi.cvar.idati, -1, structure_name)
+                tid = idc.import_type(-1, structure_name)
                 if tid:
                     tinfo = idaapi.create_typedef(structure_name)
                     ptr_tinfo = idaapi.tinfo_t()
@@ -657,8 +661,8 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
             return
         min_size = enabled_items[-1].offset + enabled_items[-1].size - base
         tinfo = idaapi.tinfo_t()
-        for ordinal in range(1, idaapi.get_ordinal_qty(idaapi.cvar.idati)):
-            tinfo.get_numbered_type(idaapi.cvar.idati, ordinal)
+        for ordinal in range(1, helper.get_ordinal_qty()):
+            tinfo.get_numbered_type(None, ordinal)
             if tinfo.is_udt() and tinfo.get_size() >= min_size:
                 is_found = False
                 for offset in offsets:
@@ -740,7 +744,7 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
             udt_data = idaapi.udt_type_data_t()
             if item.tinfo.get_udt_details(udt_data):
                 for udt_item in udt_data:
-                    member = Member(offset + udt_item.offset // 8, udt_item.type, None)
+                    member = Member(offset + udt_item.offset // 8, udt_item.type.copy(), None)
                     member.name = udt_item.name
                     self.add_row(member)
 

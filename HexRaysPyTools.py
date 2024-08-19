@@ -48,3 +48,10 @@ def PLUGIN_ENTRY():
     logging.root.setLevel(settings.DEBUG_MESSAGE_LEVEL)
     idaapi.notify_when(idaapi.NW_OPENIDB, cache.initialize_cache)
     return MyPlugin()
+
+
+if __name__ == "__main__":
+    # Manually initialize plugin.
+    print("Initializing HexRaysPyTools Plugin")
+    plugin = PLUGIN_ENTRY()
+    plugin.init()

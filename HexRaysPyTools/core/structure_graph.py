@@ -3,6 +3,8 @@ import logging
 import idaapi
 import idc
 
+from . import helper
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,7 +43,7 @@ class LocalType:
 class StructureGraph:
     # TODO:Enum types display
     def __init__(self, ordinal_list=None):
-        self.ordinal_list = ordinal_list if ordinal_list else range(1, idc.get_ordinal_qty())
+        self.ordinal_list = ordinal_list if ordinal_list else range(1, helper.get_ordinal_qty())
         self.local_types = {}
         self.edges = []
         self.final_edges = []
@@ -100,12 +102,12 @@ class StructureGraph:
         if local_typestring:
             p_type, fields = local_typestring
             local_tinfo = idaapi.tinfo_t()
-            local_tinfo.deserialize(idaapi.cvar.idati, p_type, fields)
+            local_tinfo.deserialize(None, p_type, fields)
             return local_tinfo
         return None
 
     def initialize_nodes(self):
-        for ordinal in range(1, idc.get_ordinal_qty()):
+        for ordinal in range(1, helper.get_ordinal_qty()):
             # if ordinal == 15:
             #     import pydevd
             #     pydevd.settrace("localhost", port=12345, stdoutToServer=True, stderrToServer=True)

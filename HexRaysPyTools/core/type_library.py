@@ -2,8 +2,11 @@ import ctypes
 import sys
 
 import idaapi
+import ida_typeinf
+import idc
 
 from . import const
+from . import helper
 import HexRaysPyTools.forms as forms
 
 
@@ -20,7 +23,7 @@ til_t._fields_ = [
 
 
 def _enable_library_ordinals(library_num):
-    idaname = "ida64" if const.EA64 else "ida"
+    idaname = "ida64" if idaapi.IDB_EXT == "i64" else "ida"
     if sys.platform == "win32":
         dll = ctypes.windll[idaname + ".dll"]
     elif sys.platform == "linux2":
@@ -40,10 +43,10 @@ def choose_til():
     # type: () -> (idaapi.til_t, int, bool)
     """ Creates a list of loaded libraries, asks user to take one of them and returns it with
     information about max ordinal and whether it's local or imported library """
-    idati = idaapi.cvar.idati
+    idati = ida_typeinf.get_idati()
     list_type_library = [(idati, idati.name, idati.desc)]
-    for idx in range(idaapi.cvar.idati.nbases):
-        type_library = idaapi.cvar.idati.base(idx)          # type: idaapi.til_t
+    for idx in range(idati.nbases):
+        type_library = idati.base(idx)          # type: idaapi.til_t
         list_type_library.append((type_library, type_library.name, type_library.desc))
 
     library_chooser = forms.MyChoose(
@@ -55,17 +58,17 @@ def choose_til():
     library_num = library_chooser.Show(True)
     if library_num != -1:
         selected_library = list_type_library[library_num][0]    # type: idaapi.til_t
-        max_ordinal = idaapi.get_ordinal_qty(selected_library)
-        if max_ordinal == idaapi.BADORD:
+        max_ordinal = helper.get_ordinal_qty(selected_library)
+        if max_ordinal == ida_typeinf.BADORD:
             _enable_library_ordinals(library_num - 1)
-            max_ordinal = idaapi.get_ordinal_qty(selected_library)
+            max_ordinal = helper.get_ordinal_qty(selected_library)
         print("[DEBUG] Maximal ordinal of lib {0} = {1}".format(selected_library.name, max_ordinal))
         return selected_library, max_ordinal, library_num == 0
 
 
 def import_type(library, name):
-    if library.name != idaapi.cvar.idati.name:
-        last_ordinal = idaapi.get_ordinal_qty(idaapi.cvar.idati)
-        type_id = idaapi.import_type(library, -1, name)  # tid_t
-        if type_id != idaapi.BADORD:
+    if library.name != ida_typeinf.get_idati().name:
+        last_ordinal = helper.get_ordinal_qty(None)
+        type_id = idc.import_type(-1, name)  # tid_t
+        if type_id != ida_typeinf.BADORD:
             return last_ordinal

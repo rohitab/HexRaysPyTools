@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui
 
 import idaapi
+import idc
 
 import HexRaysPyTools.forms
 from . import helper
@@ -65,7 +66,7 @@ class VirtualMethod(object):
             split = value.split('(')
             if len(split) == 2:
                 value = split[0] + ' ' + self.name + '(' + split[1] + ';'
-                if idaapi.parse_decl(tinfo, idaapi.cvar.idati, value, idaapi.PT_TYP) is not None:
+                if idaapi.parse_decl(tinfo, None, value, idaapi.PT_TYP) is not None:
                     if tinfo.is_func():
                         tinfo.create_ptr(tinfo)
                         if tinfo.dstr() != self.tinfo.dstr():
@@ -110,7 +111,7 @@ class VirtualMethod(object):
         func_tinfo = self.tinfo.get_pointed_object()
         class_tinfo = idaapi.tinfo_t()
         if func_tinfo.get_func_details(func_data) and func_tinfo.get_nargs() and \
-                class_tinfo.get_named_type(idaapi.cvar.idati, name):
+                class_tinfo.get_named_type(None, name):
             class_tinfo.create_ptr(class_tinfo)
             first_arg_tinfo = func_data[0].type
             if (first_arg_tinfo.is_ptr() and first_arg_tinfo.get_pointed_object().is_udt()) or \
@@ -175,7 +176,7 @@ class VirtualTable(object):
         if self.modified:
             vtable_tinfo = idaapi.tinfo_t()
             udt_data = idaapi.udt_type_data_t()
-            vtable_tinfo.get_numbered_type(idaapi.cvar.idati, self.ordinal)
+            vtable_tinfo.get_numbered_type(None, self.ordinal)
             vtable_tinfo.get_udt_details(udt_data)
             self.tinfo = vtable_tinfo
             self.name = vtable_tinfo.dstr()
@@ -197,7 +198,7 @@ class VirtualTable(object):
                     udt_member.type = virtual_function.tinfo
                     virtual_function.commit()
                 final_tinfo.create_udt(udt_data, idaapi.BTF_STRUCT)
-                final_tinfo.set_numbered_type(idaapi.cvar.idati, self.ordinal, idaapi.NTF_REPLACE, self.name)
+                final_tinfo.set_numbered_type(None, self.ordinal, idaapi.NTF_REPLACE, self.name)
                 self.modified = False
             else:
                 print("[ERROR] Something have been modified in Local types. Please refresh this view")
@@ -219,11 +220,11 @@ class VirtualTable(object):
 
     @staticmethod
     def create(tinfo, class_):
-        ordinal = idaapi.get_type_ordinal(idaapi.cvar.idati, tinfo.dstr())
+        ordinal = idaapi.get_type_ordinal(None, tinfo.dstr())
         if ordinal == 0:
-            if idaapi.import_type(idaapi.cvar.idati, -1, tinfo.dstr(), 0) == idaapi.BADNODE:
+            if idc.import_type(-1, tinfo.dstr()) == idaapi.BADNODE:
                 raise ImportError("unable to import type to idb ({})".format(tinfo.dstr()))
-            ordinal = idaapi.get_type_ordinal(idaapi.cvar.idati, tinfo.dstr())
+            ordinal = idaapi.get_type_ordinal(None, tinfo.dstr())
 
         result = all_virtual_tables.get(ordinal)
         if result:
@@ -291,7 +292,7 @@ class Class(object):
     @staticmethod
     def create_class(ordinal):
         tinfo = idaapi.tinfo_t()
-        tinfo.get_numbered_type(idaapi.cvar.idati, ordinal)
+        tinfo.get_numbered_type(None, ordinal)
         vtables = {}
         if tinfo.is_struct():
             udt_data = idaapi.udt_type_data_t()
@@ -337,7 +338,7 @@ class Class(object):
             tinfo = idaapi.tinfo_t()
             self.tinfo.get_udt_details(udt_data)
             tinfo.create_udt(udt_data, idaapi.BTF_STRUCT)
-            tinfo.set_numbered_type(idaapi.cvar.idati, self.ordinal, idaapi.NTF_REPLACE, self.name)
+            tinfo.set_numbered_type(None, self.ordinal, idaapi.NTF_REPLACE, self.name)
             self.modified = False
 
     def set_first_argument_type(self, class_name):
@@ -388,7 +389,7 @@ class Class(object):
     @property
     def tinfo(self):
         tinfo = idaapi.tinfo_t()
-        tinfo.get_numbered_type(idaapi.cvar.idati, self.ordinal)
+        tinfo.get_numbered_type(None, self.ordinal)
         return tinfo
 
     def open_function(self):
@@ -450,7 +451,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         all_virtual_tables.clear()
 
         classes = []
-        for ordinal in range(1, idaapi.get_ordinal_qty(idaapi.cvar.idati)):
+        for ordinal in range(1, helper.get_ordinal_qty()):
             result = Class.create_class(ordinal)
             if result:
                 classes.append(result)
