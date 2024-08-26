@@ -1,5 +1,6 @@
 import os
 import logging
+import idaapi
 import idc
 
 try:
@@ -8,7 +9,7 @@ except ImportError:
     # for python 2
     import ConfigParser as configparser
 
-CONFIG_FILE_PATH = os.path.join(idc.idadir(), 'cfg', 'HexRaysPyTools.cfg')
+CONFIG_FILE_PATH = os.path.join(idaapi.get_user_idadir(), 'cfg', 'HexRaysPyTools.cfg')
 
 DEBUG_MESSAGE_LEVEL = logging.INFO
 # Whether propagate names (Propagate name feature) through all names or only defaults like v11, a3, this, field_4
@@ -19,6 +20,8 @@ STORE_XREFS = True
 # Full list can be found in `Const.LEGAL_TYPES`.
 # But if set this option to True than variable of every type could be possible to scan
 SCAN_ANY_TYPE = False
+# Default dock position of the Structure Builder relative to the Pseudocode widget.
+DOCK_POSITION = "Right"
 
 
 def add_default_settings(config):
@@ -35,6 +38,9 @@ def add_default_settings(config):
     if not config.has_option("DEFAULT", "SCAN_ANY_TYPE"):
         config.set(None, 'SCAN_ANY_TYPE', str(SCAN_ANY_TYPE))
         updated = True
+    if not config.has_option("DEFAULT", "DOCK_POSITION"):
+        config.set(None, 'DOCK_POSITION', str(DOCK_POSITION))
+        updated = True
 
     if updated:
         try:
@@ -46,7 +52,7 @@ def add_default_settings(config):
 
 
 def load_settings():
-    global DEBUG_MESSAGE_LEVEL, PROPAGATE_THROUGH_ALL_NAMES, STORE_XREFS, SCAN_ANY_TYPE
+    global DEBUG_MESSAGE_LEVEL, PROPAGATE_THROUGH_ALL_NAMES, STORE_XREFS, SCAN_ANY_TYPE, DOCK_POSITION
 
     config = configparser.ConfigParser()
     if os.path.isfile(CONFIG_FILE_PATH):
@@ -58,3 +64,4 @@ def load_settings():
     PROPAGATE_THROUGH_ALL_NAMES = config.getboolean("DEFAULT", 'PROPAGATE_THROUGH_ALL_NAMES')
     STORE_XREFS = config.getboolean("DEFAULT", 'STORE_XREFS')
     SCAN_ANY_TYPE = config.getboolean("DEFAULT", 'SCAN_ANY_TYPE')
+    DOCK_POSITION = getattr(idaapi, "DP_" + config.get("DEFAULT", 'DOCK_POSITION').upper(), None)

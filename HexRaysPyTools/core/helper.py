@@ -48,10 +48,9 @@ def get_ordinal(tinfo):
     """ Returns non-zero ordinal of tinfo if it exist in database """
     ordinal = tinfo.get_ordinal()
     if ordinal == 0:
-        t = idaapi.tinfo_t()
-        struct_name = tinfo.dstr().split()[-1]        # Get rid of `struct` prefix or something else
-        t.get_named_type(None, struct_name)
-        ordinal = t.get_ordinal()
+        struct_name = tinfo.get_type_name()
+        if idc.import_type(-1, struct_name) != idaapi.BADNODE:
+            ordinal = idaapi.get_type_ordinal(None, struct_name)
     return ordinal
 
 
@@ -109,7 +108,7 @@ def choose_virtual_func_address(name, tinfo=None, offset=None):
         return addresses[0]
 
     chooser = forms.MyChoose(
-        [[to_hex(ea), idc.demangle_name(idc.get_name(ea), idc.INF_LONG_DN)] for ea in addresses],
+        [[to_hex(ea), idc.demangle_name(n:=idc.get_name(ea), idc.get_inf_attr(idc.INF_LONG_DN)) or n] for ea in addresses],
         "Select Function",
         [["Address", 10], ["Full name", 50]]
     )

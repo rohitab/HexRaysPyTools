@@ -30,7 +30,7 @@ class LocalType:
     @property
     def name_and_color(self):
         if self.is_selected:
-            return self.name, 0x0000FF
+            return self.name, 0x6699FF
         elif self.is_typedef:
             return self.name, 0x99FFFF
         elif self.is_enum:
@@ -124,18 +124,18 @@ class StructureGraph:
                     typeref_tinfo = StructureGraph.get_tinfo_by_ordinal(typeref_ordinal)
                     if typeref_tinfo.is_typeref() or typeref_tinfo.is_udt() or typeref_tinfo.is_ptr():
                         members_ordinals = [typeref_ordinal]
-                cdecl_typedef = idaapi.print_tinfo(None, 4, 5, 0x3, local_tinfo, None, None)
+                cdecl_typedef = idaapi.print_tinfo(None, 4, 5, idaapi.PRTYPE_MULTI | idaapi.PRTYPE_TYPE | idaapi.PRTYPE_NOREGEX, local_tinfo, None, None)
                 self.local_types[ordinal] = LocalType(name, members_ordinals, cdecl_typedef, is_typedef=True)
             elif local_tinfo.is_udt():
                 # udt_data = idaapi.udt_type_data_t()
                 # local_tinfo.get_udt_details(udt_data)
                 members_ordinals = StructureGraph.get_members_ordinals(local_tinfo)
-                cdecl_typedef = idaapi.print_tinfo(None, 4, 5, 0x1, local_tinfo, None, None)
+                cdecl_typedef = idaapi.print_tinfo(None, 4, 5, idaapi.PRTYPE_MULTI | idaapi.PRTYPE_NOREGEX, local_tinfo, None, None)
                 self.local_types[ordinal] = LocalType(name, members_ordinals, cdecl_typedef, is_union=local_tinfo.is_union())
             elif local_tinfo.is_ptr():
                 typeref_ordinal = StructureGraph.get_ordinal(local_tinfo)
                 members_ordinals = [typeref_ordinal] if typeref_ordinal else []
-                cdecl_typedef = idaapi.print_tinfo(None, 4, 5, 0x2, local_tinfo, None, None)
+                cdecl_typedef = idaapi.print_tinfo(None, 4, 5, idaapi.PRTYPE_TYPE | idaapi.PRTYPE_NOREGEX, local_tinfo, None, None)
                 self.local_types[ordinal] = LocalType(
                     name,
                     members_ordinals,
@@ -143,7 +143,7 @@ class StructureGraph:
                     is_typedef=True
                 )
             elif local_tinfo.is_enum():
-                cdecl_typedef = idaapi.print_tinfo(None, 4, 5, 0x21, local_tinfo, None, None)
+                cdecl_typedef = idaapi.print_tinfo(None, 4, 5, idaapi.PRTYPE_MULTI | idaapi.PRTYPE_DEF | idaapi.PRTYPE_NOREGEX, local_tinfo, None, None)
                 self.local_types[ordinal] = LocalType(name, [], cdecl_typedef, is_enum=True)
 
         self.ordinal_list = set(self.ordinal_list).intersection(self.local_types)
@@ -187,7 +187,7 @@ class StructureGraph:
             if ordinal in self.local_types:
                 self.generate_final_edges_down(ordinal)
                 self.generate_final_edges_up(ordinal)
-        return set([node for nodes in self.final_edges for node in nodes])
+        return set([node for nodes in self.final_edges for node in nodes]).union(self.ordinal_list)
 
     def get_edges(self):
         return self.final_edges

@@ -192,7 +192,7 @@ class _RenameUsingAssertVisitor(idaapi.ctree_parentee_t):
 
     def __add_func_name(self, arg_expr):
         new_name = idc.get_strlit_contents(arg_expr.obj_ea)
-        if type(new_name) is not str:
+        if new_name and type(new_name) is not str:
             # convert bytes to str (python 3)
             new_name = new_name.decode('ascii')
         if not idaapi.is_valid_typename(new_name):

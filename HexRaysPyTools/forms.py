@@ -46,7 +46,7 @@ class StructureBuilder(idaapi.PluginForm):
         btn_pack = QtWidgets.QPushButton("&Pack")
         btn_unpack = QtWidgets.QPushButton("&Unpack")
         btn_remove = QtWidgets.QPushButton("&Remove")
-        btn_resolve = QtWidgets.QPushButton("Resolve")
+        btn_resolve = QtWidgets.QPushButton("Resol&ve")
         btn_clear = QtWidgets.QPushButton("Clear")  # Clear button doesn't have shortcut because it can fuck up all work
         btn_recognize = QtWidgets.QPushButton("Recognize Shape")
         btn_recognize.setStyleSheet("QPushButton {width: 100px; height: 20px;}")
@@ -59,6 +59,7 @@ class StructureBuilder(idaapi.PluginForm):
         btn_pack.setShortcut("p")
         btn_unpack.setShortcut("u")
         btn_remove.setShortcut("r")
+        btn_resolve.setShortcut("v")
 
         struct_view = QtWidgets.QTableView()
         struct_view.setModel(self.structure_model)
@@ -90,7 +91,7 @@ class StructureBuilder(idaapi.PluginForm):
         vertical_box.addLayout(grid_box)
         self.parent.setLayout(vertical_box)
 
-        btn_finalize.clicked.connect(lambda: self.structure_model.finalize())
+        btn_finalize.clicked.connect(lambda: self.structure_model.finalize() and self.Close(idaapi.WCLS_SAVE))
         btn_disable.clicked.connect(lambda: self.structure_model.disable_rows(struct_view.selectedIndexes()))
         btn_enable.clicked.connect(lambda: self.structure_model.enable_rows(struct_view.selectedIndexes()))
         btn_origin.clicked.connect(lambda: self.structure_model.set_origin(struct_view.selectedIndexes()))
@@ -102,7 +103,6 @@ class StructureBuilder(idaapi.PluginForm):
         btn_clear.clicked.connect(lambda: self.structure_model.clear())
         btn_recognize.clicked.connect(lambda: self.structure_model.recognize_shape(struct_view.selectedIndexes()))
         struct_view.activated[QtCore.QModelIndex].connect(self.structure_model.activated)
-        self.structure_model.dataChanged.connect(struct_view.clearSelection)
 
     def OnClose(self, form):
         pass
@@ -143,8 +143,9 @@ class StructureGraphViewer(idaapi.GraphViewer):
     def change_selected(self, ordinals):
         self.graph.change_selected(ordinals)
         self.Refresh()
-        self.Select(self.nodes_id[ordinals[0]])
-
+        node_id = self.nodes_id.get(ordinals[0])
+        if node_id != None:
+            idaapi.viewer_center_on(self.GetWidget(), node_id)
 
 class ClassViewer(idaapi.PluginForm):
     def __init__(self, proxy_model, class_model):

@@ -144,7 +144,7 @@ class VirtualFunction:
         name = idaapi.get_name(self.address)
         if idaapi.is_valid_typename(name):
             return name
-        name = idc.demangle_name(name, idc.get_inf_attr(idc.INF_SHORT_DN))
+        name = idc.demangle_name(name, idc.get_inf_attr(idc.INF_SHORT_DN)) or name
         return common.demangled_name_to_c_str(name)
 
     @property
@@ -197,7 +197,7 @@ class VirtualTable(AbstractMember):
             return [0xd9d9d9, 0x0] if self.__virtual_table.virtual_functions[n].visited else [0xffffff, 0x0]
 
         def OnGetIcon(self, n):
-            return 32 if self.__virtual_table.virtual_functions[n].visited else 160
+            return 61 if self.__virtual_table.virtual_functions[n].visited else 59
 
         def OnInsertLine(self):
             """ Scan All Functions menu """
@@ -258,12 +258,16 @@ class VirtualTable(AbstractMember):
 
         :return: idaapi.tid_t
         """
-        cdecl_typedef = idaapi.print_tinfo(None, 4, 5, idaapi.PRTYPE_MULTI | idaapi.PRTYPE_TYPE | idaapi.PRTYPE_SEMI,
+        cdecl_typedef = idaapi.print_tinfo(None, 4, 5, idaapi.PRTYPE_MULTI | idaapi.PRTYPE_TYPE | idaapi.PRTYPE_SEMI | idaapi.PRTYPE_NOREGEX,
                                            self.create_tinfo(), self.vtable_name, None)
         if ask:
             cdecl_typedef = idaapi.ask_text(0x10000, cdecl_typedef, "The following new type will be created")
             if not cdecl_typedef:
                 return
+
+        if idc.parse_decl(cdecl_typedef, idaapi.PT_TYP) is None:
+            return 0
+
         previous_ordinal = idaapi.get_type_ordinal(None, self.vtable_name)
         if previous_ordinal:
             idaapi.del_numbered_type(None, previous_ordinal)
@@ -388,7 +392,7 @@ class VirtualTable(AbstractMember):
 class Member(AbstractMember):
     def __init__(self, offset, tinfo, scanned_variable, origin=0):
         AbstractMember.__init__(self, offset + origin, scanned_variable, origin)
-        self.tinfo = tinfo
+        self.tinfo = tinfo.copy()
         self.name = "field_{0:X}".format(self.offset)
 
     def get_udt_member(self, array_size=0, offset=0):
@@ -416,6 +420,7 @@ class Member(AbstractMember):
         tinfo.deserialize(None, tp, fld, None)
         self.tinfo = tinfo
         self.is_array = False
+        return True
 
 
 class VoidMember(Member):
@@ -552,8 +557,11 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
             offset = item.offset + item.size
 
         final_tinfo.create_udt(udt_data, idaapi.BTF_STRUCT)
-        cdecl = idaapi.print_tinfo(None, 4, 5, idaapi.PRTYPE_MULTI | idaapi.PRTYPE_TYPE | idaapi.PRTYPE_SEMI,
+        cdecl = idaapi.print_tinfo(None, 4, 5, idaapi.PRTYPE_MULTI | idaapi.PRTYPE_TYPE | idaapi.PRTYPE_SEMI | idaapi.PRTYPE_NOREGEX,
                                    final_tinfo, self.get_name(), None)
+        if not cdecl:
+            return
+
         cdecl = idaapi.ask_text(0x10000, '#pragma pack(push, 1)\n' + cdecl, "The following new type will be created")
 
         if cdecl:
@@ -695,6 +703,7 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
     def finalize(self):
         if self.pack():
             self.clear()
+            return True
 
     def disable_rows(self, indices):
         for idx in indices:
@@ -744,7 +753,7 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
             udt_data = idaapi.udt_type_data_t()
             if item.tinfo.get_udt_details(udt_data):
                 for udt_item in udt_data:
-                    member = Member(offset + udt_item.offset // 8, udt_item.type.copy(), None)
+                    member = Member(offset + udt_item.offset // 8, udt_item.type, None)
                     member.name = udt_item.name
                     self.add_row(member)
 
@@ -827,4 +836,6 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
 
         # Double click on type. If type is virtual table than opens windows with virtual methods
         elif index.column() == 1:
-            self.items[index.row()].activate(self)
+            if self.items[index.row()].activate(self):
+                self.dataChanged.emit(index, index)
+                self.refresh_collisions()

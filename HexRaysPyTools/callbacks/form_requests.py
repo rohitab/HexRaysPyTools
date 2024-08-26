@@ -5,11 +5,12 @@ import HexRaysPyTools.core.cache as cache
 import HexRaysPyTools.core.classes as classes
 from HexRaysPyTools.core.structure_graph import StructureGraph
 from HexRaysPyTools.forms import StructureGraphViewer, ClassViewer, StructureBuilder
+import HexRaysPyTools.settings as settings
 
 
 class ShowGraph(actions.Action):
     description = "Show graph"
-    hotkey = "G"
+    hotkey = "Shift+G"
 
     def __init__(self):
         super(ShowGraph, self).__init__()
@@ -71,11 +72,26 @@ class ShowStructureBuilder(actions.HexRaysPopupAction):
         return True
 
     def activate(self, ctx):
+        previous_widget = idaapi.get_current_widget()
         tform = idaapi.find_widget("Structure Builder")
         if tform:
             idaapi.activate_widget(tform, True)
         else:
             StructureBuilder(cache.temporary_structure).Show()
+
+        # Dock the Structure Builder relative to the active/any Pseudocode widget.
+        if settings.DOCK_POSITION:
+            pseudocode_widget = None
+            if idaapi.get_widget_type(previous_widget) == idaapi.BWN_PSEUDOCODE:
+                pseudocode_widget = previous_widget
+            elif not tform:
+                # Pseudocode widget was not active and the Structure Builder was just opened,
+                # so find the first available Pseudocode widget, if any.
+                for id in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                    if pseudocode_widget := idaapi.find_widget(f"Pseudocode-{id}"):
+                        break
+            if pseudocode_widget:
+                idaapi.set_dock_pos("Structure Builder", idaapi.get_widget_title(pseudocode_widget), settings.DOCK_POSITION)
 
     def update(self, ctx):
         return idaapi.AST_ENABLE_ALWAYS

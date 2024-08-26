@@ -11,7 +11,7 @@ from HexRaysPyTools.core.temporary_structure import TemporaryStructureModel
 
 
 class MyPlugin(idaapi.plugin_t):
-    flags = 0
+    flags = idaapi.PLUGIN_HIDE
     comment = "Plugin for automatic classes reconstruction"
     help = "See https://github.com/igogo-x86/HexRaysPyTools/blob/master/readme.md"
     wanted_name = "HexRaysPyTools"

@@ -13,7 +13,7 @@ all_virtual_tables = {}         # ordinal -> VirtualTable
 
 class VirtualMethod(object):
     def __init__(self, tinfo, name, parent):
-        self.tinfo = tinfo
+        self.tinfo = tinfo.copy()
         self.tinfo_modified = False
         self.name = name
         self.class_name = None
@@ -169,7 +169,7 @@ class VirtualTable(object):
         self.class_ = [class_]
         self.class_name = None
         self.virtual_functions = []
-        self.name = self.tinfo.dstr()
+        self.name = self.tinfo.get_type_name()
         self._modified = False
 
     def update(self):
@@ -179,7 +179,7 @@ class VirtualTable(object):
             vtable_tinfo.get_numbered_type(None, self.ordinal)
             vtable_tinfo.get_udt_details(udt_data)
             self.tinfo = vtable_tinfo
-            self.name = vtable_tinfo.dstr()
+            self.name = vtable_tinfo.get_type_name()
             self.modified = False
             if len(self.virtual_functions) == len(udt_data):
                 for current_function, other_function in zip(self.virtual_functions, udt_data):
@@ -220,11 +220,11 @@ class VirtualTable(object):
 
     @staticmethod
     def create(tinfo, class_):
-        ordinal = idaapi.get_type_ordinal(None, tinfo.dstr())
+        ordinal = idaapi.get_type_ordinal(None, tinfo.get_type_name())
         if ordinal == 0:
-            if idc.import_type(-1, tinfo.dstr()) == idaapi.BADNODE:
-                raise ImportError("unable to import type to idb ({})".format(tinfo.dstr()))
-            ordinal = idaapi.get_type_ordinal(None, tinfo.dstr())
+            if idc.import_type(-1, tinfo.get_type_name()) == idaapi.BADNODE:
+                raise ImportError("unable to import type to idb ({})".format(tinfo.get_type_name()))
+            ordinal = idaapi.get_type_ordinal(None, tinfo.get_type_name())
 
         result = all_virtual_tables.get(ordinal)
         if result:
@@ -309,7 +309,7 @@ class Class(object):
                         else:
                             vtables[field_udt.offset // 8] = possible_vtable
         if vtables:
-            class_ = Class(tinfo.dstr(), tinfo, ordinal)
+            class_ = Class(tinfo.get_type_name(), tinfo, ordinal)
             for offset, vtable_tinfo in vtables.items():
                 vtables[offset] = VirtualTable.create(vtable_tinfo, class_)
             class_.vtables = vtables
@@ -452,9 +452,12 @@ class TreeModel(QtCore.QAbstractItemModel):
 
         classes = []
         for ordinal in range(1, helper.get_ordinal_qty()):
-            result = Class.create_class(ordinal)
-            if result:
-                classes.append(result)
+            try:
+                result = Class.create_class(ordinal)
+                if result:
+                    classes.append(result)
+            except ImportError as e:
+                print("[ERROR]", e.msg)
 
         for class_ in classes:
             class_item = TreeItem(class_, root)

@@ -14,8 +14,9 @@ def _choose_structure_by_size(size):
         for ordinal in range(1, max_ordinal):
             tinfo.create_typedef(selected_library, ordinal)
             if tinfo.get_size() == size:
-                name = tinfo.dstr()
-                description = idaapi.print_tinfo(None, 0, 0, idaapi.PRTYPE_DEF, tinfo, None, None)
+                flags = 0 if idaapi.IDA_SDK_VERSION < 900 else idaapi.PRTYPE_TYPE
+                name = tinfo.get_type_name()
+                description = idaapi.print_tinfo(None, 0, 0, flags | idaapi.PRTYPE_DEF | idaapi.PRTYPE_NOREGEX, tinfo, None, None)
                 matched_types.append([str(ordinal), name, description])
 
         type_chooser = forms.MyChoose(
