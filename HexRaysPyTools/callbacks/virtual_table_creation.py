@@ -12,8 +12,8 @@ class CreateVtable(actions.Action):
         super(CreateVtable, self).__init__()
 
     @staticmethod
-    def check(ea):
-        return ea != idaapi.BADADDR and VirtualTable.check_address(ea)
+    def check(ea, auto_func=True):
+        return ea != idaapi.BADADDR and VirtualTable.check_address(ea, auto_func)
 
     def activate(self, ctx):
         ea = ctx.cur_ea
@@ -23,7 +23,7 @@ class CreateVtable(actions.Action):
 
     def update(self, ctx):
         if ctx.widget_type == idaapi.BWN_DISASM:
-            if self.check(ctx.cur_ea):
+            if self.check(ctx.cur_ea, False):
                 idaapi.attach_action_to_popup(ctx.widget, None, self.name)
                 return idaapi.AST_ENABLE
             idaapi.detach_action_from_popup(ctx.widget, self.name)

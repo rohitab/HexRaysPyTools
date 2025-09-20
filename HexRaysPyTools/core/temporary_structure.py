@@ -1,9 +1,13 @@
 import bisect
 import itertools
-from PyQt5 import QtCore, QtGui, QtWidgets
 
 import idaapi
 import idc
+
+if idaapi.IDA_SDK_VERSION >= 920:
+    from PySide6 import QtCore, QtGui, QtWidgets
+else:
+    from PyQt5 import QtCore, QtGui, QtWidgets
 
 from . import common
 from . import const
@@ -344,7 +348,7 @@ class VirtualTable(AbstractMember):
         self.show_virtual_functions(temp_struct)
 
     @staticmethod
-    def check_address(address):
+    def check_address(address, auto_func=True):
         # Checks if given address contains virtual table. Returns True if more than 2 function pointers found
         # Also if table's addresses point to code in executable section, than tries to make functions at that addresses
         if helper.is_code_ea(address):
@@ -352,6 +356,11 @@ class VirtualTable(AbstractMember):
 
         if not idaapi.get_name(address):
             return False
+
+        # To avoid running all the checks below each time the cursor is moved,
+        # just check if the current address is a pointer to code.
+        if not auto_func:
+            return helper.is_code_ea(helper.get_ptr(address))
 
         functions_count = 0
         while True:
@@ -369,7 +378,9 @@ class VirtualTable(AbstractMember):
                         address += const.EA_SIZE
                         continue
                 break
-            idaapi.auto_wait()
+            # The following statement will hang IDA if you try to create a virtual table during
+            # initial auto-analysis. IDA will eventually recover after analysis is complete.
+            # idaapi.auto_wait()
         return functions_count
 
     @property
@@ -518,7 +529,7 @@ class TemporaryStructureModel(QtCore.QAbstractTableModel):
 
     def flags(self, index):
         if index.column() == 2:
-            return super(TemporaryStructureModel, self).flags(index) | QtWidgets.QAbstractItemView.DoubleClicked
+            return super(TemporaryStructureModel, self).flags(index) | QtCore.Qt.ItemIsEditable
         return super(TemporaryStructureModel, self).flags(index)
 
     # HELPER METHODS #

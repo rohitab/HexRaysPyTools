@@ -40,6 +40,7 @@ actions.action_manager.register(ShowGraph())
 class ShowClasses(actions.Action):
     description = "Classes"
     hotkey = "Alt+F1"
+    menupath = "View/Open subviews/Local types"
 
     def __init__(self):
         super(ShowClasses, self).__init__()
@@ -58,7 +59,6 @@ class ShowClasses(actions.Action):
 
 show_classes = ShowClasses()
 actions.action_manager.register(show_classes)
-idaapi.attach_action_to_menu('View/Open subviews/Local types', show_classes.name, idaapi.SETMENU_APP)
 
 
 class ShowStructureBuilder(actions.HexRaysPopupAction):

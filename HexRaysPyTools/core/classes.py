@@ -1,7 +1,12 @@
-from PyQt5 import QtCore, QtGui
-
 import idaapi
 import idc
+
+if idaapi.IDA_SDK_VERSION >= 920:
+    from PySide6 import QtCore, QtGui
+    from PySide6.QtCore import Signal as pyqtSignal
+else:
+    from PyQt5 import QtCore, QtGui
+    from PyQt5.QtCore import pyqtSignal
 
 import HexRaysPyTools.forms
 from . import helper
@@ -436,7 +441,7 @@ class TreeItem(object):
 class TreeModel(QtCore.QAbstractItemModel):
     # TODO: Add higlighting if eip in function, consider setting breakpoints
 
-    refreshed = QtCore.pyqtSignal()
+    refreshed = pyqtSignal()
 
     def __init__(self, parent=None):
         super(TreeModel, self).__init__(parent)
@@ -594,6 +599,9 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
     def __init__(self):
         super(ProxyModel, self).__init__()
         self.filter_by_function = False
+        if idaapi.IDA_SDK_VERSION >= 920:
+            self.filterRegExp = self.filterRegularExpression
+            self.setFilterRegExp = self.setFilterRegularExpression
 
     def set_regexp_filter(self, regexp):
         if regexp and regexp[0] == '!':
@@ -612,6 +620,9 @@ class ProxyModel(QtCore.QSortFilterProxyModel):
             if self.filter_by_function and isinstance(item, Class):
                 return item.has_function(filter_regexp)
             else:
-                return filter_regexp.indexIn(item.class_name) >= 0
+                if idaapi.IDA_SDK_VERSION >= 920:
+                    return filter_regexp.match(item.class_name).hasMatch()
+                else:
+                    return filter_regexp.indexIn(item.class_name) >= 0
 
         return True

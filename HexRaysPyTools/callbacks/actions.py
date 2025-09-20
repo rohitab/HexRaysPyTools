@@ -17,6 +17,8 @@ class ActionManager(object):
                 )
             if isinstance(action, HexRaysPopupAction):
                 hx_callback_manager.register(idaapi.hxe_populating_popup, HexRaysPopupRequestHandler(action))
+            if action.menupath:
+                idaapi.attach_action_to_menu(action.menupath, action.name, idaapi.SETMENU_APP)
 
     def finalize(self):
         for action in self.__actions:
@@ -32,6 +34,7 @@ class Action(idaapi.action_handler_t):
     """
     description = None
     hotkey = None
+    menupath = None
 
     def __init__(self):
         super(Action, self).__init__()

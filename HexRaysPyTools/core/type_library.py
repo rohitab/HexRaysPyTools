@@ -23,7 +23,7 @@ til_t._fields_ = [
 
 
 def _enable_library_ordinals(library_num):
-    idaname = "ida64" if idaapi.IDB_EXT == "i64" else "ida"
+    idaname = "ida64" if (idaapi.IDB_EXT == "i64" and idaapi.IDA_SDK_VERSION < 900) else "ida"
     if sys.platform == "win32":
         dll = ctypes.windll[idaname + ".dll"]
     elif sys.platform == "linux2":
